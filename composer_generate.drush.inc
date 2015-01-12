@@ -96,6 +96,14 @@ function composer_generate_drush_help($section) {
   }
 }
 
+function _drush_composer_generate_list_projects() {
+  drush_include_engine('update_info', 'drupal', NULL, DRUSH_BASE_PATH . '/commands/pm/update_info');
+  $extensions = drush_get_extensions();
+  $projects = drush_get_projects($extensions);
+
+  return $projects;
+}
+
 /**
  * Implementation of drush_hook_COMMAND().
  *
@@ -110,21 +118,15 @@ function drush_composer_generate() {
 
   $composer_data = json_decode($base_composer_json, TRUE);
 
-  // Use the pm-updatestatus command to get info on the currently
-  // installed projects.
-  $values = drush_invoke_process("@self", "pm-updatestatus", array(), array(), array('integrate' => FALSE));
-  $updatestatus_info = $values["object"];
+  $project_list = _drush_composer_generate_list_projects();
 
   // Iterate over every project that was returned
-  foreach ($updatestatus_info as $project_name => $project_info) {
+  foreach ($project_list as $project_name => $project_info) {
     if
     (  ($project_name != 'drupal') &&
-       ($project_info['project_status']) &&
-       (isset($project_info['existing_version'])) &&
-       (isset($project_info['link']))
+       (!empty($project_info['version']))
     ) {
-      $vendor_name = FALSE;
-      $version = $project_info['existing_version'];
+      $version = $project_info['version'];
       $minimum_stability = _drush_composer_generate_auto_set_minimum_stability($version, $minimum_stability);
       // Convert a version from "7.x-3.1" to "7.3.1"
       $composer_version = str_replace('.x-', '.', $version);
@@ -140,13 +142,21 @@ function drush_composer_generate() {
       // formats are acceptable in the Drupal packagist projects, and
       // force simplification of those which are not.
       $composer_version = preg_replace('/([0-9]*\.[0-9]*).*/', '${1}.*', $composer_version);
-      // ~ syntax, if preferred.
+      // Use ~ syntax, if preferred:
       // $composer_version = preg_replace('/([0-9]*\.[0-9]*).*/', '~${1}', $composer_version);
-      // Is this a project from drupal.org?
-      if (strstr($project_info['link'], 'https://www.drupal.org/') !== FALSE) {
+      // Is this a project from drupal.org?  The project will not exist in the project
+      // list unless it is from drupal.org, or it contains a 'status url'.  Other
+      // extensions are just invisible to us.
+      if (!isset($project_info['status url'])) {
         $vendor_name = "drupal";
       }
       // TODO: try to find the $vendor_name of projects from other sources
+      else {
+        $vendor_name = preg_replace("#http://([^/]*).*#", '${1}', $project_info['status url']);
+        $vendor_name = preg_replace('#\.[a-z]*$#', '', $vendor_name);
+        $vendor_name = preg_replace('#.*\.#', '', $vendor_name);
+        drush_log(dt("Unknown repository for project '!project'; just guessing it might be '!vendor'.", array('!project' => $project_name, '!vendor' => $vendor_name)), 'warning');
+      }
       if ($vendor_name) {
         $composer_data['require']["$vendor_name/$project_name"] = $composer_version;
       }
