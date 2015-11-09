@@ -21,6 +21,7 @@ function composer_generate_drush_command() {
         'description' => 'Path to composer.json or URL to git project containing base composer.json file.',
         'example-value' => 'https://raw.githubusercontent.com/derhasi/drupal-composer-project/master/composer.json',
       ),
+      'output' => 'Path to output composer.json',
       'stability' => array(
         'description' => 'Set minimum-stability',
         'example-value' => 'dev|alpha|beta|RC|stable',
@@ -178,27 +179,22 @@ function drush_composer_generate() {
   }
   // Produce the composer.json text from the $composer_data array
   $result_composer_json = json_encode($composer_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-  drush_print($result_composer_json);
+
+  $output_path = drush_get_option('output', FALSE);
+  if ($output_path) {
+    file_put_contents($output_path, $result_composer_json);
+  }
+  else {
+    drush_print($result_composer_json);
+  }
 }
 
 function _drush_composer_generate_get_base_file($base) {
+  if (!empty($base) && file_exists($base)) {
+    return file_get_contents($base);
+  }
   $filespec = __DIR__ . '/templates/d' . drush_drupal_major_version() . '_composer.json';
   return file_get_contents($filespec);
-
-/*
-  // If not specified, then we'll use a default file crafted
-  // for the current version of Drupal being used.
-  if (empty($base)) {
-  }
-  // Is there a protocol?
-  elseif(strstr($base, '://')) {
-
-  }
-  // Otherwise, presume a file
-  else {
-
-  }
-*/
 }
 
 function _drush_composer_generate_auto_set_minimum_stability($version, $cur_minimum_stability) {
