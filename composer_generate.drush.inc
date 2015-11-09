@@ -8,11 +8,10 @@ function composer_generate_drush_command() {
 
   $items['composer-generate'] = array(
     'description' => "Drush command composer-generate.",
-    // Describe the arguments for this command.  Delete
-    // this seciton if command takes no arguments.
-    //'arguments' => array(
-    //  'arg' => 'Description of command argument.',
-    //),
+    // Describe the arguments for this command.
+    'arguments' => array(
+      'site' => 'Site alias to read extensions from. Defaults to @self.',
+    ),
     // List all options used for this command. Only options that
     // are listed here (or that are global Drush options) may
     // be specified on the commnadline; all others raise an error.
@@ -97,12 +96,10 @@ function composer_generate_drush_help($section) {
   }
 }
 
-function _drush_composer_generate_list_projects() {
-  drush_include_engine('update_info', 'drupal', NULL, DRUSH_BASE_PATH . '/commands/pm/update_info');
-  $extensions = drush_get_extensions();
-  $projects = drush_get_projects($extensions);
+function _drush_composer_generate_list_projects($site_alias) {
+  $values = drush_invoke_process($site_alias, "php-eval", array("return drush_get_projects(drush_get_extensions())"), array(), FALSE);
 
-  return $projects;
+  return $values['object'];
 }
 
 /**
@@ -110,7 +107,7 @@ function _drush_composer_generate_list_projects() {
  *
  * Main command implementation goes here.
  */
-function drush_composer_generate() {
+function drush_composer_generate($site_alias = '@self') {
   // dev, alpha, beta, RC, and stable
   $minimum_stability = drush_get_option("stability", "stable");
   $base = drush_get_option('base', FALSE);
@@ -119,7 +116,7 @@ function drush_composer_generate() {
 
   $composer_data = json_decode($base_composer_json, TRUE);
 
-  $project_list = _drush_composer_generate_list_projects();
+  $project_list = _drush_composer_generate_list_projects($site_alias);
 
   // Iterate over every project that was returned
   foreach ($project_list as $project_name => $project_info) {
