@@ -29,6 +29,7 @@ function composer_generate_drush_command() {
     // Give one or more example commandline usages for this command
     'examples' => array(
       'drush composer-generate' => 'Create a composer.json file for an existing Drupal site that does not yet use composer.',
+      'drush composer-generate @alias' => 'Look up modules and themes used by site indicated by provided @alias, and write entries for them into the "require" section of the composer.json in the current directoyr.',
     ),
     /*
       // Delete the 'outputformat' record if command does not
@@ -45,6 +46,7 @@ function composer_generate_drush_command() {
       ),
     */
     'aliases' => array('compgen'),
+    'bootstrap' => DRUSH_BOOTSTRAP_DRUSH,
   );
 
   // Commandfiles may also add topics.  These will appear in
@@ -102,6 +104,12 @@ function _drush_composer_generate_list_projects($site_alias) {
   return $values['object'];
 }
 
+function _drush_composer_generate_drupal_major_version($site_alias) {
+  $values = drush_invoke_process($site_alias, "php-eval", array("return drush_drupal_major_version()"), array(), FALSE);
+
+  return $values['object'];
+}
+
 /**
  * Implementation of drush_hook_COMMAND().
  *
@@ -111,8 +119,26 @@ function drush_composer_generate($site_alias = '@self') {
   // dev, alpha, beta, RC, and stable
   $minimum_stability = drush_get_option("stability", "stable");
   $base = drush_get_option('base', FALSE);
+  $output_path = drush_get_option('output', FALSE);
+  if (!empty($base) && is_dir($base) && is_file($base . '/composer.json')) {
+    $base .= '/composer.json';
+  }
+  if (empty($base) && file_exists('composer.json')) {
+    if (!drush_confirm(dt("Add projects to composer.json in the cwd?"))) {
+      return drush_user_abort();
+    }
+    $base = 'composer.json';
+    if (!$output_path) {
+      $output_path = $base;
+    }
+  }
 
-  $base_composer_json = _drush_composer_generate_get_base_file($base);
+  $major_version = _drush_composer_generate_drupal_major_version($site_alias);
+  if (empty($major_version)) {
+    return drush_set_error('NO_SOURCE_SITE', dt("Could not find a Drupal site to fetch module version information from."));
+  }
+
+  $base_composer_json = _drush_composer_generate_get_base_file($base, $major_version);
 
   $composer_data = json_decode($base_composer_json, TRUE);
 
@@ -161,15 +187,15 @@ function drush_composer_generate($site_alias = '@self') {
     }
   }
 
-  // If we really want this to work, we'd better also add composer_autoload
-  if ((drush_drupal_major_version() < 8)  && (!array_key_exists('drupal/composer_vendor', $composer_data['require']))) {
-    $composer_data['require']["drupal/composer_vendor"] = drush_drupal_major_version() . ".*";
+  // If we really want this to work, we'd better also add drupal/composer_vendor
+  if (($major_version < 8)  && (!array_key_exists('drupal/composer_vendor', $composer_data['require']))) {
+    $composer_data['require']["drupal/composer_vendor"] = $major_version . ".*";
   }
 
   // Insert "minimum stability: dev" if the user requested it.
-  // TODO:  We might also want to auto-set this based on whether
-  // there are dev version found when we are evaluating project versions
-  // above.
+  // We also auto-set this based on whether
+  // there are dev version found when evaluating
+  // project versions above.
   if ($minimum_stability != "stable") {
     $composer_data["minimum-stability"] = $minimum_stability;
     $composer_data["prefer-stable"] = TRUE;
@@ -177,7 +203,6 @@ function drush_composer_generate($site_alias = '@self') {
   // Produce the composer.json text from the $composer_data array
   $result_composer_json = json_encode($composer_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
-  $output_path = drush_get_option('output', FALSE);
   if ($output_path) {
     file_put_contents($output_path, $result_composer_json);
   }
@@ -186,11 +211,11 @@ function drush_composer_generate($site_alias = '@self') {
   }
 }
 
-function _drush_composer_generate_get_base_file($base) {
+function _drush_composer_generate_get_base_file($base, $major_version) {
   if (!empty($base) && file_exists($base)) {
     return file_get_contents($base);
   }
-  $filespec = __DIR__ . '/templates/d' . drush_drupal_major_version() . '_composer.json';
+  $filespec = __DIR__ . '/templates/d' . $major_version . '_composer.json';
   return file_get_contents($filespec);
 }
 
