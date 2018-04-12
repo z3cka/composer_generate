@@ -4,14 +4,14 @@
   "repositories": [
     {
       "type": "composer",
-      "url": "http://packagist.drupal-composer.org/"
+      "url": "https://packages.drupal.org/7"
     }
   ],
   "require": {
     "davidbarratt/custom-installer": "dev-master",
     "derhasi/composer-preserve-paths": "0.1.*",
     "drupal/drupal": "7.*",
-    "drupal/composer_vendor": "7.1.*"
+    "drupal/composer_vendor": "1.0.*"
   },
   "scripts": {
     "post-create-project-cmd": ["rm README.md LICENSE"]

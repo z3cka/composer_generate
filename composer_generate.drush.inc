@@ -152,20 +152,22 @@ function drush_composer_generate($site_alias = '@self') {
     ) {
       $version = $project_info['version'];
       $minimum_stability = _drush_composer_generate_auto_set_minimum_stability($version, $minimum_stability);
-      // Convert a version from "7.x-3.1" to "7.3.1"
-      $composer_version = str_replace('.x-', '.', $version);
+      // Convert a version from "7.x-3.1" to "3.1"
+      $composer_version = str_replace('7.x-', '', $version);
       // At this point, we might have a version that looks something like one of:
-      //   - 7.3.1
-      //   - 7.1.0-beta2
-      //   - 7.2.0-alpha3+108-dev
+      //   - 3.1
+      //   - 1.0-beta2
+      //   - 2.0-alpha3+108-dev
       // We are going to universally convert these to:
-      //   - ~7.3
+      //   - ~3
       // TODO: control this with an option, so folks can keep the
       // exact version numbers in their composer.json files if
       // they wish.  To do this, we should also determine which version
       // formats are acceptable in the Drupal packagist projects, and
       // force simplification of those which are not.
-      $composer_version = preg_replace('/([0-9]*\.[0-9]*).*/', '${1}.*', $composer_version);
+
+      $composer_version = preg_replace('/([0-9])\.([0-9]).*/', '${1}.${2}.*', $composer_version);
+
       // Use ~ syntax, if preferred:
       // $composer_version = preg_replace('/([0-9]*\.[0-9]*).*/', '~${1}', $composer_version);
       // Is this a project from drupal.org?  The project will not exist in the project
@@ -216,6 +218,7 @@ function _drush_composer_generate_get_base_file($base, $major_version) {
     return file_get_contents($base);
   }
   $filespec = __DIR__ . '/templates/d' . $major_version . '_composer.json';
+
   return file_get_contents($filespec);
 }
 
