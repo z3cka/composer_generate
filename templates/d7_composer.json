@@ -9,7 +9,7 @@
   ],
   "require": {
     "davidbarratt/custom-installer": "dev-master",
-    "drupal-composer/composer-preserve-paths": "0.1.*",
+    "drupal-composer/preserve-paths": "0.1.*",
     "drupal/drupal": "7.*",
     "drupal/composer_vendor": "1.*"
   },

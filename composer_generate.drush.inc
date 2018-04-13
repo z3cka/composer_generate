@@ -165,7 +165,7 @@ function drush_composer_generate($site_alias = '@self') {
       // they wish.  To do this, we should also determine which version
       // formats are acceptable in the Drupal packagist projects, and
       // force simplification of those which are not.
-      $composer_version = preg_replace('/([0-9])\.([0-9]).*/', '${1}.${2}.*', $composer_version);
+      $composer_version = preg_replace('/(\d+(?=\.))(\.x)?(\.\d+)?(-\w+)?/', '$1$3.0$4', $composer_version);
       // Use ~ syntax, if preferred:
       // $composer_version = preg_replace('/([0-9]*\.[0-9]*).*/', '~${1}', $composer_version);
       // Is this a project from drupal.org?  The project will not exist in the project
