@@ -164,8 +164,23 @@ function drush_composer_generate($site_alias = '@self') {
       // exact version numbers in their composer.json files if
       // they wish.  To do this, we should also determine which version
       // formats are acceptable in the Drupal packagist projects, and
+
       // force simplification of those which are not.
-      $composer_version = preg_replace('/(\d+(?=\.))(\.x)?(\.\d+)?(-\w+)?/', '$1$3.0$4', $composer_version);
+      if ($project_name == 'commerce_discount'
+        || $project_name == 'inline_conditions'
+        || $project_name == 'commerce_physical'
+      ) {
+        print_r(' before: '. $project_name .': '. $composer_version . PHP_EOL);
+      }
+      $composer_version = preg_replace('/(\d+(?=\.)(?!.x))(\.\d+)?(-\w+)?/', '$1$2.0$3', $composer_version);
+      // force simplification of those which are not.
+      if ($project_name == 'commerce_discount'
+        || $project_name == 'inline_conditions'
+        || $project_name == 'commerce_physical'
+      ) {
+        print_r(' after:  '. $project_name .': '. $composer_version . PHP_EOL);
+      }
+
       // Use ~ syntax, if preferred:
       // $composer_version = preg_replace('/([0-9]*\.[0-9]*).*/', '~${1}', $composer_version);
       // Is this a project from drupal.org?  The project will not exist in the project
